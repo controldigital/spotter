@@ -104,6 +104,7 @@ class SpotterItem {
       if (this.elementsList && this.elementsList.length) {
         this.elementsList.forEach((element) => {
           element.settings = this.settings;
+          element.data = { hidden: false };
         });
       }
     } else {
@@ -239,24 +240,41 @@ class Spotter {
   _inViewIntersectionObserver(entries) {
     entries.forEach((entry) => {
       let settings = entry.target.settings;
-      if (settings.hide === true || settings.hide === 1) {
-        this.hide(entry.target);
-      }
       if (entry.isIntersecting === true) {
         if (settings.animation) {
           this.animate(entry.target);
         }
-        if (settings.lazyLoad === true || settings.lazyLoad === 1) {
+        if (
+          settings.lazyLoad === true ||
+          settings.lazyLoad === 1
+        ) {
           this.lazyLoadImages(entry.target);
         }
-        if (settings.spotted && 'function' === typeof settings.spotted) {
+        if (settings.spotted &&
+          'function' === typeof settings.spotted
+        ) {
           settings.spotted(entry.target);
         }
       } else {
-        if (settings.repeat === true || settings.repeat === 1) {
+        if (
+          (settings.hide === true ||
+          settings.hide === 1 ||
+          'string' === typeof settings.hide) &&
+          entry.target.data.hidden === false
+        ) {
+          this.hide(entry.target);
+          entry.target.data.hidden = true;
+        }
+        if (
+          settings.repeat === true ||
+          settings.repeat === 1
+        ) {
           this.hide(entry.target);
         }
-        if (settings.unSpotted && 'function' === typeof settings.unSpotted) {
+        if (
+          settings.unSpotted &&
+          'function' === typeof settings.unSpotted
+        ) {
           settings.unSpotted(entry.target);
         }
       }
