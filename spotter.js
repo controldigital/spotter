@@ -22,6 +22,8 @@ class SpotterItem {
    *  @param {(Boolean|String)} options.hide
    *  @param {Boolean} options.repeat
    *  @param {Boolean} options.lazyLoad
+   *  @param {Function} options.spotted
+   *  @param {Function} options.unSpotted
    */
   constructor(elements, options) {
     this.elements = elements;
@@ -88,7 +90,9 @@ class SpotterItem {
         animation: false,
         hide: false,
         repeat: false,
-        lazyLoad: false
+        lazyLoad: false,
+        spotted: () => {},
+        unSpotted: () => {}
       }
       for (let key in this.settings) {
         if (this.settings.hasOwnProperty(key)) {
@@ -245,9 +249,15 @@ class Spotter {
         if (settings.lazyLoad === true || settings.lazyLoad === 1) {
           this.lazyLoadImages(entry.target);
         }
+        if (settings.spotted && 'function' === typeof settings.spotted) {
+          settings.spotted(entry.target);
+        }
       } else {
         if (settings.repeat === true || settings.repeat === 1) {
           this.hide(entry.target);
+        }
+        if (settings.unSpotted && 'function' === typeof settings.unSpotted) {
+          settings.unSpotted(entry.target);
         }
       }
     });
