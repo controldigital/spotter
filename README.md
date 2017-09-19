@@ -1,7 +1,7 @@
 # spotter
 Interact with elements when they enter or exit view
 
-```
+```javascript
 var spotter = new Spotter();
 
 spotter
