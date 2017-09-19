@@ -1,6 +1,8 @@
 # spotter
 Interact with elements when they enter or exit view
 
+
+## Init
 ```javascript
 var spotter = new Spotter();
 
@@ -18,3 +20,20 @@ spotter
     }
   });
 ```
+
+## Methods
+
+### Add
+`Spotter().add(elements, options);`
+
+### Remove
+`Spotter().remove(index);`
+
+### Animate
+`Spotter().animate(element);`
+
+### Hide
+`Spotter().hide(element);`
+
+### LazyLoad
+`Spotter().lazyLoad(element);`
