@@ -153,7 +153,7 @@ class Spotter {
    *  @param {(Integer|Array)} options.threshold
    */
   constructor(options) {
-    this.items = [];
+    this.spotterItems = [];
     this.observerOptions = {
       root: null,
       rootMargin: '0px',
@@ -217,7 +217,7 @@ class Spotter {
    *  Add elements to observer to watch.
    */
   _observeEntries() {
-    this.items.forEach((item) => {
+    this.spotterItems.forEach((item) => {
       item.elementsList.forEach((element) => {
         this.observer.observe(element);
       });
@@ -306,7 +306,7 @@ class Spotter {
    *  @param {Object} options
    */
   add(elements, options = {}) {
-    this.items.push(new SpotterItem(elements, options));
+    this.spotterItems.push(new SpotterItem(elements, options));
     this._observeEntries();
     return this;
   }
@@ -316,9 +316,9 @@ class Spotter {
    *  @param {Integer} index - Number of item to remove from array.
    */
   remove(index) {
-    let item = this.items[index];
+    let item = this.spotterItems[index];
     this._unObserveEntries(item);
-    this.items.splice(index, 1);
+    this.spotterItems.splice(index, 1);
     return this;
   }
 
@@ -404,6 +404,7 @@ class Spotter {
           });
         }
       }
+      return this;
     }
   }
 
