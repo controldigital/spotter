@@ -2,7 +2,7 @@
  *  @name Spotter
  *  @author Emiel Zuurbier <emielzuurbier@outlook.com>
  *  @description Interact with elements when they enter the viewport. This script depends on the IntersectionObserver API.
- *  @version 2.0
+ *  @version 2.1
  */
 
 class SpotterItem {
@@ -103,8 +103,8 @@ class SpotterItem {
       }
       if (this.elementsList && this.elementsList.length) {
         this.elementsList.forEach((element) => {
-          element.settings = this.settings;
-          element.data = { hidden: false };
+          element.spotterSettings = this.settings;
+          element.spotterData = { hidden: false, inView: false };
         });
       }
     } else {
@@ -153,7 +153,7 @@ class Spotter {
    *  @param {(Integer|Array)} options.threshold
    */
   constructor(options) {
-    this.spotterItems = [];
+    this.items = [];
     this.observerOptions = {
       root: null,
       rootMargin: '0px',
@@ -170,11 +170,6 @@ class Spotter {
     }
     if ('IntersectionObserver' in window) {
       this._setIntersectionObserver();
-    } else {
-      throw new Error(`
-        Your browser doesn't support IntersectionObserver.
-        The function will end.`
-      );
     }
   }
 
@@ -217,7 +212,7 @@ class Spotter {
    *  Add elements to observer to watch.
    */
   _observeEntries() {
-    this.spotterItems.forEach((item) => {
+    this.items.forEach((item) => {
       item.elementsList.forEach((element) => {
         this.observer.observe(element);
       });
@@ -239,7 +234,7 @@ class Spotter {
    */
   _inViewIntersectionObserver(entries) {
     entries.forEach((entry) => {
-      let settings = entry.target.settings;
+      let settings = entry.target.spotterSettings;
       if (entry.isIntersecting === true) {
         if (settings.animation) {
           this.animate(entry.target);
@@ -260,10 +255,10 @@ class Spotter {
           (settings.hide === true ||
           settings.hide === 1 ||
           'string' === typeof settings.hide) &&
-          entry.target.data.hidden === false
+          entry.target.spotterData.hidden === false
         ) {
           this.hide(entry.target);
-          entry.target.data.hidden = true;
+          entry.target.spotterData.hidden = true;
         }
         if (
           settings.repeat === true ||
@@ -300,14 +295,85 @@ class Spotter {
   }
 
   /**
+   *  Continuous loop over elements when IntersectionObserver is not supported.
+   *  Checks if elements are in view.
+   */
+  _loopAndCheck() {
+    this.items.forEach((item) => {
+      item.elementsList.forEach((element) => {
+        let bounds = element.getBoundingClientRect();
+        let settings = element.spotterSettings;
+        let data = element.spotterData;
+        if (
+          (
+            (bounds.top < this.windowHeight && bounds.top > 0) ||
+            (bounds.bottom > 0 && bounds.bottom < this.windowHeight) ) &&
+          (
+            (bounds.left > this.windowWidth && bounds.left > 0) ||
+            (bounds.right > 0 && bounds.right < this.windowWidth)
+          )
+        ) {
+          if (data.inView === false) {
+            data.inView = true;
+            if (settings.animation) {
+              this.animate(element);
+            }
+            if (
+              settings.lazyLoad === true ||
+              settings.lazyLoad === 1
+            ) {
+              this.lazyLoadImages(element);
+            }
+            if (settings.spotted &&
+              'function' === typeof settings.spotted
+            ) {
+              settings.spotted(element);
+            }
+          }
+        } else {
+          if (data.inView === true) {
+            data.inView = false;
+            if (
+              (settings.hide === true ||
+              settings.hide === 1 ||
+              'string' === typeof settings.hide) &&
+              data.hidden === false
+            ) {
+              this.hide(element);
+              data.hidden = true;
+            }
+            if (
+              settings.repeat === true ||
+              settings.repeat === 1
+            ) {
+              this.hide(element);
+            }
+            if (
+              settings.unSpotted &&
+              'function' === typeof settings.unSpotted
+            ) {
+              settings.unSpotted(element);
+            }
+          }
+        }
+      });
+    });
+    requestAnimationFrame(this._loopAndCheck.bind(this));
+  }
+
+  /**
    *  Add elements to the list and starts observing them.
    *  Creates a new instance of SpotterItem class.
    *  @param {(HTMLElement|HTMLCollection|Array|String)} elements - Elements to add
    *  @param {Object} options
    */
   add(elements, options = {}) {
-    this.spotterItems.push(new SpotterItem(elements, options));
-    this._observeEntries();
+    this.items.push(new SpotterItem(elements, options));
+    if ('IntersectionObserver' in window) {
+      this._observeEntries();
+    } else {
+      this._loopAndCheck();
+    }
     return this;
   }
 
@@ -316,9 +382,11 @@ class Spotter {
    *  @param {Integer} index - Number of item to remove from array.
    */
   remove(index) {
-    let item = this.spotterItems[index];
-    this._unObserveEntries(item);
-    this.spotterItems.splice(index, 1);
+    let item = this.items[index];
+    if ('IntersectionObserver' in window) {
+      this._unObserveEntries(item);
+    }
+    this.items.splice(index, 1);
     return this;
   }
 
@@ -328,7 +396,7 @@ class Spotter {
    */
   animate(element) {
     if (element && this._isElement(element)) {
-      let animation = element.settings.animation;
+      let animation = element.spotterSettings.animation;
       if ('string' === typeof animation) {
         element.classList.add(animation);
       } else if ('object' === typeof animation) {
@@ -352,18 +420,18 @@ class Spotter {
    */
   hide(element) {
     if (element && this._isElement(element)) {
-      if ('boolean' === typeof element.settings.hide) {
+      if ('boolean' === typeof element.spotterSettings.hide) {
         element.style.opacity = 0;
         element.style.visibility = 'hidden';
-      } else if ('string' === typeof element.settings.hide) {
-        element.classList.add(element.settings.hide);
+      } else if ('string' === typeof element.spotterSettings.hide) {
+        element.classList.add(element.spotterSettings.hide);
       }
-      if (element.settings.animation) {
-        if ('string' === typeof element.settings.animation) {
-          element.classList.remove(element.settings.animation);
-        } else if ('object' === typeof element.settings.animation) {
-          for (let key in element.settings.animation) {
-            if (element.settings.animation.hasOwnProperty(key)) {
+      if (element.spotterSettings.animation) {
+        if ('string' === typeof element.spotterSettings.animation) {
+          element.classList.remove(element.spotterSettings.animation);
+        } else if ('object' === typeof element.spotterSettings.animation) {
+          for (let key in element.spotterSettings.animation) {
+            if (element.spotterSettings.animation.hasOwnProperty(key)) {
               element.style[key] = '';
             }
           }
@@ -404,7 +472,6 @@ class Spotter {
           });
         }
       }
-      return this;
     }
   }
 
